@@ -21,7 +21,23 @@ impl YaraEngine {
         }
 
         let mut compiler = Compiler::new();
-        let mut count = 0usize;
+        let mut count    = 0usize;
+
+        for pattern in &[
+            format!("{}/**/*.yar",  rules_dir.display()),
+            format!("{}/**/*.yara", rules_dir.display()),
+        ] {
+            for entry in glob(pattern).map_err(|e| FerrumError::YaraCompile(e.to_string()))? {
+                let path = entry.map_err(|e| FerrumError::YaraCompile(e.to_string()))?;
+                let src  = std::fs::read_to_string(&path)?;
+
+                compiler
+                    .add_source(src.as_str())
+                    .map_err(|e| FerrumError::YaraCompile(format!("{}: {e}", path.display())))?;
+
+                count += 1;
+            }
+        }
 
         if count == 0 {
             return Ok(None);
@@ -30,11 +46,31 @@ impl YaraEngine {
         let rules = compiler.build();
         Ok(Some(Self { rules }))
     }
+
+    pub fn scan_file(&self, path: &Path) -> Result<Vec<YaraMatch>, FerrumError> {
+        let mut scanner = Scanner::new(&self.rules);
+
+        let bytes = std::fs::read(path)?;
+        let results = scanner
+            .scan(&bytes)
+            .map_err(|e| FerrumError::YaraScan(e.to_string()))?;
+
+        let matches = results
+            .matching_rules()
+            .map(|rule| YaraMatch {
+                rule:      rule.identifier().to_string(),
+                namespace: rule.namespace().to_string(),
+                tags:      rule.tags().map(|t| t.identifier().to_string()).collect(),
+            })
+            .collect();
+
+        Ok(matches)
+    }
 }
 
 #[derive(Debug, Clone)]
 pub struct YaraMatch {
-    pub rule: String,
+    pub rule:      String,
     pub namespace: String,
-    pub tags: Vec<String>,
+    pub tags:      Vec<String>,
 }
