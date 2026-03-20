@@ -10,6 +10,8 @@ pub enum FerrumError {
     Io(std::io::Error),
     InvalidSignature(String),
     DatabaseNotFound(String),
+    YaraCompile(String),
+    YaraScan(String),
 }
 
 impl fmt::Display for FerrumError {
@@ -18,6 +20,8 @@ impl fmt::Display for FerrumError {
             Self::Io(e)                  => write!(f, "I/O error: {e}"),
             Self::InvalidSignature(line) => write!(f, "malformed signature line: {line}"),
             Self::DatabaseNotFound(path) => write!(f, "signature database not found: {path}"),
+            Self::YaraCompile(msg)       => write!(f, "YARA compile error: {msg}"),
+            Self::YaraScan(msg)          => write!(f, "YARA scan error: {msg}"),
         }
     }
 }

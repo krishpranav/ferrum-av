@@ -9,6 +9,7 @@ mod hasher;
 mod report;
 mod scanner;
 mod sigdb;
+mod yara_scanner;
 
 use anyhow::Result;
 use clap::Parser;
